@@ -12,7 +12,7 @@ import {
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../config/firebase";
 
-const CATEGORIES = ["Comida", "Transporte", "Bebé", "Julinda", "Vladimir"];
+const CATEGORIES = ["Comida", "Chucherías", "Transporte", "Bebé", "Julinda", "Vladimir"];
 
 export default function AddExpenseScreen({ onExpenseAdded }) {
   const [amount, setAmount] = useState("");

@@ -26,7 +26,7 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-const CATEGORIES = ["Comida", "Transporte", "Bebé", "Julinda", "Vladimir"];
+const CATEGORIES = ["Comida", "Chucherías", "Transporte", "Bebé", "Julinda", "Vladimir"];
 
 function shouldSendNow() {
   // MODO TEST: Siempre envía para probar

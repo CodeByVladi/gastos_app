@@ -16,7 +16,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 
-const CATEGORIES = ["Comida", "Transporte", "Bebé", "Julinda", "Vladimir"];
+const CATEGORIES = ["Comida", "Chucherías", "Transporte", "Bebé", "Julinda", "Vladimir"];
 
 export default function SummaryScreen() {
   const [expenses, setExpenses] = useState([]);
