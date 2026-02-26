@@ -95,12 +95,27 @@ async function sendTelegramMessage(text) {
 
 (async () => {
   if (!FORCE_SEND && !shouldSendNow()) {
+    console.log("No es día 1 a las 7 AM. No se envía mensaje.");
     return;
   }
 
+  console.log("Enviando resumen mensual...");
+
   const { start, end, previous } = getPreviousMonthRange();
   const expenses = await fetchExpenses(start, end);
+  
+  console.log(`Encontrados ${expenses.length} gastos`);
+  
   const monthLabel = formatMonthName(previous);
+  
+  // Si no hay gastos, enviar mensaje de prueba
+  if (expenses.length === 0) {
+    const testMessage = `🤖 Prueba de Bot - ${monthLabel}\n\n✅ El bot está funcionando correctamente.\n\n📝 No hay gastos registrados para este mes.\n\n💡 Agrega gastos en la app para ver el resumen.`;
+    await sendTelegramMessage(testMessage);
+    console.log("Mensaje de prueba enviado (sin gastos)");
+    return;
+  }
+  
   const summary = buildSummary(expenses, monthLabel);
 
   await sendTelegramMessage(summary);
