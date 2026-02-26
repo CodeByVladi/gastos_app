@@ -1,0 +1,18 @@
+{
+  "version": "11.0.0",
+  "projects": {
+    "default": "gastos-app-xxxxx"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-functions-debug.log"
+      ]
+    }
+  ]
+}
