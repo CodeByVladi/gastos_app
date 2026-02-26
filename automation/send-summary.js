@@ -29,6 +29,9 @@ const db = admin.firestore();
 const CATEGORIES = ["Comida", "Transporte", "Bebé", "Julinda", "Vladimir"];
 
 function shouldSendNow() {
+  // MODO TEST: Siempre envía para probar
+  if (FORCE_SEND) return true;
+  
   const now = DateTime.now().setZone(TIMEZONE);
   return now.day === 1 && now.hour === 7;
 }
