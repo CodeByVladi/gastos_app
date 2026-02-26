@@ -7,6 +7,7 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { signOut } from "firebase/auth";
 import { auth } from "../config/firebase";
 
@@ -18,6 +19,10 @@ export default function SettingsScreen({ onLogout }) {
         text: "Cerrar Sesión",
         onPress: async () => {
           try {
+            // Borrar credenciales guardadas
+            await AsyncStorage.removeItem("userEmail");
+            await AsyncStorage.removeItem("userPassword");
+            
             await signOut(auth);
             onLogout();
           } catch (error) {

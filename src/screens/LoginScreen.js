@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   TextInput,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -18,8 +19,31 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("");
+
+  // Auto-login al cargar
+  useEffect(() => {
+    checkAutoLogin();
+  }, []);
+
+  const checkAutoLogin = async () => {
+    try {
+      const savedEmail = await AsyncStorage.getItem("userEmail");
+      const savedPassword = await AsyncStorage.getItem("userPassword");
+
+      if (savedEmail && savedPassword) {
+        // Intentar login automático
+        await signInWithEmailAndPassword(auth, savedEmail, savedPassword);
+        onLoginSuccess();
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      // Si falla, mostrar pantalla de login
+      setLoading(false);
+    }
+  };
 
   const handleAuth = async () => {
     if (!email || !password) {
@@ -31,6 +55,10 @@ export default function LoginScreen({ onLoginSuccess }) {
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
+        
+        // Guardar credenciales para auto-login
+        await AsyncStorage.setItem("userEmail", email);
+        await AsyncStorage.setItem("userPassword", password);
       } else {
         if (!userName) {
           Alert.alert("Error", "Por favor ingresa tu nombre");
@@ -46,6 +74,10 @@ export default function LoginScreen({ onLoginSuccess }) {
         await userCredential.user.updateProfile({
           displayName: userName,
         });
+        
+        // Guardar credenciales para auto-login
+        await AsyncStorage.setItem("userEmail", email);
+        await AsyncStorage.setItem("userPassword", password);
       }
       onLoginSuccess();
     } catch (error) {
@@ -54,6 +86,16 @@ export default function LoginScreen({ onLoginSuccess }) {
       setLoading(false);
     }
   };
+
+  // Mostrar loading mientras verifica auto-login
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+        <Text style={styles.loadingText}>Cargando...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -118,6 +160,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
     backgroundColor: "#f5f5f5",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#666",
   },
   title: {
     fontSize: 28,
