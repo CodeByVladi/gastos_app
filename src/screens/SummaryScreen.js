@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,36 +6,50 @@ import {
   ScrollView,
   FlatList,
   ActivityIndicator,
+  TouchableOpacity,
+  Alert,
+  Picker,
 } from "react-native";
 import {
   collection,
   query,
   where,
   getDocs,
-  Timestamp,
+  deleteDoc,
+  doc,
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 
-const CATEGORIES = ["Comida", "Chucherías", "Transporte", "Bebé", "Julinda", "Vladimir"];
+const CATEGORIES = ["Comida", "Chucherías", "Casa", "Transporte", "Bebé", "Julinda", "Vladimir"];
+
+const categoryEmojis = {
+  "Comida": "🍽️",
+  "Chucherías": "🍬",
+  "Casa": "🏠",
+  "Transporte": "🚗",
+  "Bebé": "👶",
+  "Julinda": "👩",
+  "Vladimir": "👨"
+};
 
 export default function SummaryScreen() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoryTotals, setCategoryTotals] = useState({});
   const [grandTotal, setGrandTotal] = useState(0);
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedCategory, setSelectedCategory] = useState("Todos");
+  const [selectedPerson, setSelectedPerson] = useState("Todos");
+  const [showComparison, setShowComparison] = useState(false);
+  const [previousMonthTotal, setPreviousMonthTotal] = useState(0);
 
-  useEffect(() => {
-    loadExpenses();
-  }, []);
-
-  const loadExpenses = async () => {
+  const loadExpenses = useCallback(async () => {
     try {
       setLoading(true);
 
-      // Obtener fecha del primer y último día del mes actual
-      const now = new Date();
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      // Obtener rango del mes seleccionado
+      const firstDay = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
+      const lastDay = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
 
       const q = query(
         collection(db, "expenses"),
@@ -47,7 +61,6 @@ export default function SummaryScreen() {
       const loadedExpenses = [];
       const totals = {};
 
-      // Inicializar totales
       CATEGORIES.forEach((cat) => {
         totals[cat] = 0;
       });
@@ -55,22 +68,100 @@ export default function SummaryScreen() {
       let total = 0;
 
       querySnapshot.forEach((doc) => {
-        const expense = { ...doc.data(), id: doc.id };
+        const expense = { id: doc.id, ...doc.data() };
         loadedExpenses.push(expense);
 
-        const category = expense.category;
-        totals[category] = (totals[category] || 0) + expense.amount;
-        total += expense.amount;
+        if (totals.hasOwnProperty(expense.category)) {
+          totals[expense.category] += Number(expense.amount || 0);
+        }
+        total += Number(expense.amount || 0);
       });
 
-      setExpenses(loadedExpenses);
+      // Aplicar filtros
+      let filtered = loadedExpenses;
+      if (selectedCategory !== "Todos") {
+        filtered = filtered.filter(e => e.category === selectedCategory);
+      }
+      if (selectedPerson !== "Todos") {
+        filtered = filtered.filter(e => e.userName === selectedPerson);
+      }
+
+      setExpenses(filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
       setCategoryTotals(totals);
       setGrandTotal(total);
-    } catch (error) {
-      console.error("Error loading expenses:", error);
+
+      // Cargar datos de mes anterior para comparativa
+      if (showComparison) {
+        loadComparisonData();
+      }
+    } catch (_error) {
+      console.error("Error loading expenses:", _error);
+      Alert.alert("Error", "No se pudieron cargar los gastos");
     } finally {
       setLoading(false);
     }
+  }, [selectedMonth, selectedCategory, selectedPerson, showComparison, loadComparisonData]);
+
+  useEffect(() => {
+    loadExpenses();
+  }, [loadExpenses]);
+
+  const loadComparisonData = useCallback(async () => {
+    try {
+      const previousMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1);
+      const firstDay = new Date(previousMonth.getFullYear(), previousMonth.getMonth(), 1);
+      const lastDay = new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0);
+
+      const q = query(
+        collection(db, "expenses"),
+        where("createdAt", ">=", firstDay.toISOString()),
+        where("createdAt", "<=", lastDay.toISOString()),
+      );
+
+      const querySnapshot = await getDocs(q);
+      let total = 0;
+
+      querySnapshot.forEach((doc) => {
+        total += Number(doc.data().amount || 0);
+      });
+
+      setPreviousMonthTotal(total);
+    } catch (_error) {
+      console.error("Error loading comparison:", _error);
+    }
+  }, [selectedMonth]);
+
+  const handleDeleteExpense = (expenseId) => {
+    Alert.alert(
+      "Eliminar gasto",
+      "¿Estás seguro de que deseas eliminar este gasto?",
+      [
+        { text: "Cancelar", onPress: () => {} },
+        {
+          text: "Eliminar",
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(db, "expenses", expenseId));
+              loadExpenses();
+              Alert.alert("Éxito", "Gasto eliminado correctamente");
+            } catch (_error) {
+              Alert.alert("Error", "No se pudo eliminar el gasto");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const changeMonth = (offset) => {
+    const newMonth = new Date(selectedMonth);
+    newMonth.setMonth(newMonth.getMonth() + offset);
+    setSelectedMonth(newMonth);
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" });
   };
 
   if (loading) {
@@ -81,34 +172,123 @@ export default function SummaryScreen() {
     );
   }
 
+  const monthName = selectedMonth.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+  const difference = grandTotal - previousMonthTotal;
+  const percentChange = previousMonthTotal > 0 ? ((difference / previousMonthTotal) * 100).toFixed(1) : 0;
+
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Resumen del Mes</Text>
+      {/* Selector de mes */}
+      <View style={styles.monthSelector}>
+        <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.monthButton}>
+          <Text style={styles.monthButtonText}>◀</Text>
+        </TouchableOpacity>
+        <Text style={styles.monthText}>{monthName.toUpperCase()}</Text>
+        <TouchableOpacity onPress={() => changeMonth(1)} style={styles.monthButton}>
+          <Text style={styles.monthButtonText}>▶</Text>
+        </TouchableOpacity>
+      </View>
 
-      <View style={styles.summaryCard}>
-        {CATEGORIES.map((category) => (
-          <View key={category} style={styles.categoryRow}>
-            <Text style={styles.categoryName}>{category}</Text>
-            <Text style={styles.categoryAmount}>
-              ${(categoryTotals[category] || 0).toFixed(2)}
+      {/* Total principal */}
+      <View style={styles.totalCard}>
+        <Text style={styles.totalLabel}>💰 TOTAL DEL MES</Text>
+        <Text style={styles.totalAmount}>${grandTotal.toFixed(2)}</Text>
+      </View>
+
+      {/* Comparativa */}
+      {showComparison && (
+        <View style={[styles.comparisonCard, {borderLeftColor: difference > 0 ? "#FF6B6B" : "#4CAF50"}]}>
+          <Text style={styles.comparisonTitle}>📊 Comparativa Mensual</Text>
+          <View style={styles.comparisonRow}>
+            <Text style={styles.comparisonLabel}>Mes anterior:</Text>
+            <Text style={styles.comparisonValue}>${previousMonthTotal.toFixed(2)}</Text>
+          </View>
+          <View style={styles.comparisonRow}>
+            <Text style={styles.comparisonLabel}>Este mes:</Text>
+            <Text style={styles.comparisonValue}>${grandTotal.toFixed(2)}</Text>
+          </View>
+          <View style={styles.comparisonRow}>
+            <Text style={[styles.comparisonLabel, {color: difference > 0 ? "#FF6B6B" : "#4CAF50", fontWeight: "bold"}]}>
+              {difference > 0 ? "▲" : "▼"} Variación:
+            </Text>
+            <Text style={[styles.comparisonValue, {color: difference > 0 ? "#FF6B6B" : "#4CAF50", fontWeight: "bold"}]}>
+              ${Math.abs(difference).toFixed(2)} ({percentChange}%)
             </Text>
           </View>
-        ))}
+        </View>
+      )}
 
-        <View style={styles.divider} />
+      {/* Botones de control */}
+      <TouchableOpacity 
+        style={styles.comparisonButton}
+        onPress={() => {
+          setShowComparison(!showComparison);
+          if (!showComparison) loadComparisonData();
+        }}
+      >
+        <Text style={styles.comparisonButtonText}>
+          {showComparison ? "🙈 Ocultar Comparativa" : "📈 Ver Comparativa"}
+        </Text>
+      </TouchableOpacity>
 
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>TOTAL</Text>
-          <Text style={styles.totalAmount}>${grandTotal.toFixed(2)}</Text>
+      {/* Filtros */}
+      <View style={styles.filtersContainer}>
+        <View style={styles.filterGroup}>
+          <Text style={styles.filterLabel}>Categoría</Text>
+          <View style={styles.pickerWrapper}>
+            <Picker
+              selectedValue={selectedCategory}
+              onValueChange={setSelectedCategory}
+              style={styles.picker}
+            >
+              <Picker.Item label="Todas" value="Todos" />
+              {CATEGORIES.map(cat => (
+                <Picker.Item key={cat} label={`${categoryEmojis[cat]} ${cat}`} value={cat} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        <View style={styles.filterGroup}>
+          <Text style={styles.filterLabel}>Persona</Text>
+          <View style={styles.pickerWrapper}>
+            <Picker
+              selectedValue={selectedPerson}
+              onValueChange={setSelectedPerson}
+              style={styles.picker}
+            >
+              <Picker.Item label="Todos" value="Todos" />
+              <Picker.Item label="👩 Julinda" value="Julinda" />
+              <Picker.Item label="👨 Vladimir" value="Vladimir" />
+            </Picker>
+          </View>
         </View>
       </View>
 
-      <Text style={styles.historyTitle}>Historial de Gastos</Text>
+      {/* Resumen por categoría */}
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryTitle}>📋 Por Categoría</Text>
+        {CATEGORIES.map((category) => {
+          if (categoryTotals[category] === 0) return null;
+          return (
+            <View key={category} style={styles.categoryRow}>
+              <Text style={styles.categoryName}>
+                {categoryEmojis[category]} {category}
+              </Text>
+              <Text style={styles.categoryAmount}>
+                ${categoryTotals[category].toFixed(2)}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
 
+      {/* Lista de gastos */}
+      <Text style={styles.listTitle}>📝 Gastos ({expenses.length})</Text>
       {expenses.length === 0 ? (
-        <Text style={styles.noExpenses}>
-          No hay gastos registrados este mes
-        </Text>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No hay gastos para este período</Text>
+        </View>
       ) : (
         <FlatList
           data={expenses}
@@ -117,17 +297,25 @@ export default function SummaryScreen() {
           renderItem={({ item }) => (
             <View style={styles.expenseItem}>
               <View style={styles.expenseInfo}>
-                <Text style={styles.expenseCategory}>{item.category}</Text>
+                <Text style={styles.expenseCategory}>
+                  {categoryEmojis[item.category]} {item.category}
+                </Text>
                 {item.description && (
-                  <Text style={styles.expenseDescription}>
-                    {item.description}
-                  </Text>
+                  <Text style={styles.expenseDescription}>{item.description}</Text>
                 )}
-                <Text style={styles.expenseUser}>{item.userName}</Text>
+                <Text style={styles.expenseUser}>
+                  {item.userName} • {formatDate(item.createdAt)}
+                </Text>
               </View>
-              <Text style={styles.expenseAmount}>
-                ${item.amount.toFixed(2)}
-              </Text>
+              <View style={styles.expenseRight}>
+                <Text style={styles.expenseAmount}>${item.amount.toFixed(2)}</Text>
+                <TouchableOpacity
+                  onPress={() => handleDeleteExpense(item.id)}
+                  style={styles.deleteButton}
+                >
+                  <Text style={styles.deleteButtonText}>🗑️</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         />
@@ -139,116 +327,240 @@ export default function SummaryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: "#f5f5f5",
+    padding: 16,
   },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#f5f5f5",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    color: "#333",
-  },
-  summaryCard: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 20,
+  monthSelector: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
+  monthButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: "#4CAF50",
+    minWidth: 40,
+    alignItems: "center",
+  },
+  monthButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  monthText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    flex: 1,
+    textAlign: "center",
+  },
+  totalCard: {
+    backgroundColor: "#4CAF50",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  totalLabel: {
+    fontSize: 14,
+    color: "#fff",
+    opacity: 0.9,
+    marginBottom: 8,
+  },
+  totalAmount: {
+    fontSize: 36,
+    fontWeight: "bold",
+    color: "white",
+  },
+  comparisonCard: {
+    backgroundColor: "white",
+    borderLeftWidth: 4,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  comparisonTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 12,
+  },
+  comparisonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  comparisonLabel: {
+    fontSize: 13,
+    color: "#666",
+  },
+  comparisonValue: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  comparisonButton: {
+    backgroundColor: "#2196F3",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    alignItems: "center",
+  },
+  comparisonButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  filtersContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+    gap: 10,
+  },
+  filterGroup: {
+    flex: 1,
+  },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#666",
+    marginBottom: 6,
+  },
+  pickerWrapper: {
+    backgroundColor: "white",
+    borderRadius: 8,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  picker: {
+    height: 40,
+    color: "#333",
+  },
+  summaryCard: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  summaryTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 12,
+  },
   categoryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
   categoryName: {
     fontSize: 14,
     color: "#333",
-    fontWeight: "500",
   },
   categoryAmount: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#4CAF50",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#ddd",
-    marginVertical: 10,
-  },
-  totalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: 10,
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  totalAmount: {
-    fontSize: 18,
     fontWeight: "bold",
     color: "#4CAF50",
   },
-  historyTitle: {
-    fontSize: 18,
+  listTitle: {
+    fontSize: 14,
     fontWeight: "bold",
-    marginBottom: 15,
     color: "#333",
+    marginBottom: 12,
+  },
+  emptyContainer: {
+    backgroundColor: "white",
+    borderRadius: 8,
+    padding: 24,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  emptyText: {
+    color: "#999",
+    fontSize: 14,
   },
   expenseItem: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    backgroundColor: "white",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   expenseInfo: {
     flex: 1,
   },
   expenseCategory: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "bold",
     color: "#333",
   },
   expenseDescription: {
     fontSize: 12,
     color: "#666",
-    marginTop: 3,
+    marginTop: 4,
   },
   expenseUser: {
     fontSize: 11,
     color: "#999",
-    marginTop: 3,
+    marginTop: 4,
+  },
+  expenseRight: {
+    alignItems: "flex-end",
+    gap: 8,
   },
   expenseAmount: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#4CAF50",
-    marginLeft: 10,
   },
-  noExpenses: {
-    textAlign: "center",
-    color: "#999",
-    fontSize: 14,
-    marginTop: 20,
+  deleteButton: {
+    padding: 6,
+    backgroundColor: "#ffebee",
+    borderRadius: 6,
+  },
+  deleteButtonText: {
+    fontSize: 16,
   },
 });
