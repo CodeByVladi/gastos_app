@@ -12,7 +12,7 @@ const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 // Enviar resumen el día 1 de cada mes a las 7 AM
 exports.sendMonthlySummary = functions.pubsub
   .schedule("0 7 1 * *")
-  .timeZone("America/Los_Angeles")
+  .timeZone("Europe/Madrid")
   .onRun(async () => {
     try {
       const now = new Date();

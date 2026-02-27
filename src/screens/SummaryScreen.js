@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Alert,
-  Picker,
 } from "react-native";
 import {
   collection,
@@ -235,32 +234,56 @@ export default function SummaryScreen() {
       <View style={styles.filtersContainer}>
         <View style={styles.filterGroup}>
           <Text style={styles.filterLabel}>Categoría</Text>
-          <View style={styles.pickerWrapper}>
-            <Picker
-              selectedValue={selectedCategory}
-              onValueChange={setSelectedCategory}
-              style={styles.picker}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+            <TouchableOpacity
+              style={[styles.filterChip, selectedCategory === "Todos" && styles.filterChipActive]}
+              onPress={() => setSelectedCategory("Todos")}
             >
-              <Picker.Item label="Todas" value="Todos" />
-              {CATEGORIES.map(cat => (
-                <Picker.Item key={cat} label={`${categoryEmojis[cat]} ${cat}`} value={cat} />
-              ))}
-            </Picker>
-          </View>
+              <Text style={[styles.filterChipText, selectedCategory === "Todos" && styles.filterChipTextActive]}>
+                Todas
+              </Text>
+            </TouchableOpacity>
+            {CATEGORIES.map(cat => (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.filterChip, selectedCategory === cat && styles.filterChipActive]}
+                onPress={() => setSelectedCategory(cat)}
+              >
+                <Text style={[styles.filterChipText, selectedCategory === cat && styles.filterChipTextActive]}>
+                  {categoryEmojis[cat]} {cat}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
         <View style={styles.filterGroup}>
           <Text style={styles.filterLabel}>Persona</Text>
-          <View style={styles.pickerWrapper}>
-            <Picker
-              selectedValue={selectedPerson}
-              onValueChange={setSelectedPerson}
-              style={styles.picker}
+          <View style={styles.filterButtonsRow}>
+            <TouchableOpacity
+              style={[styles.filterButton, selectedPerson === "Todos" && styles.filterButtonActive]}
+              onPress={() => setSelectedPerson("Todos")}
             >
-              <Picker.Item label="Todos" value="Todos" />
-              <Picker.Item label="👩 Julinda" value="Julinda" />
-              <Picker.Item label="👨 Vladimir" value="Vladimir" />
-            </Picker>
+              <Text style={[styles.filterButtonText, selectedPerson === "Todos" && styles.filterButtonTextActive]}>
+                Todos
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterButton, selectedPerson === "Julinda" && styles.filterButtonActive]}
+              onPress={() => setSelectedPerson("Julinda")}
+            >
+              <Text style={[styles.filterButtonText, selectedPerson === "Julinda" && styles.filterButtonTextActive]}>
+                👩 Julinda
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterButton, selectedPerson === "Vladimir" && styles.filterButtonActive]}
+              onPress={() => setSelectedPerson("Vladimir")}
+            >
+              <Text style={[styles.filterButtonText, selectedPerson === "Vladimir" && styles.filterButtonTextActive]}>
+                👨 Vladimir
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -439,30 +462,66 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   filtersContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
     marginBottom: 16,
-    gap: 10,
   },
   filterGroup: {
-    flex: 1,
+    marginBottom: 16,
   },
   filterLabel: {
     fontSize: 12,
     fontWeight: "bold",
     color: "#666",
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  pickerWrapper: {
+  filterScroll: {
+    flexDirection: "row",
+  },
+  filterChip: {
     backgroundColor: "white",
-    borderRadius: 8,
-    overflow: "hidden",
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginRight: 8,
     borderWidth: 1,
     borderColor: "#e0e0e0",
   },
-  picker: {
-    height: 40,
-    color: "#333",
+  filterChipActive: {
+    backgroundColor: "#4CAF50",
+    borderColor: "#4CAF50",
+  },
+  filterChipText: {
+    fontSize: 13,
+    color: "#666",
+  },
+  filterChipTextActive: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  filterButtonsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  filterButton: {
+    flex: 1,
+    backgroundColor: "white",
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  filterButtonActive: {
+    backgroundColor: "#2196F3",
+    borderColor: "#2196F3",
+  },
+  filterButtonText: {
+    fontSize: 13,
+    color: "#666",
+  },
+  filterButtonTextActive: {
+    color: "white",
+    fontWeight: "bold",
   },
   summaryCard: {
     backgroundColor: "white",
