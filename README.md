@@ -1,50 +1,144 @@
-# Welcome to your Expo app 👋
+# 💰 Gastos App - Familia González
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+App móvil y web para registro de gastos familiares con resúmenes automáticos mensuales vía Telegram.
 
-## Get started
+## 📱 Características
 
-1. Install dependencies
+- ✅ **Registro de Gastos** - Añade gastos con categoría, monto y descripción
+- 📊 **Resumen Mensual** - Visualiza gastos del mes con filtros y comparativas
+- 🗑️ **Eliminar Gastos** - Borra gastos individuales con confirmación
+- 📅 **Historial** - Navega entre meses anteriores
+- 🔍 **Filtros** - Por categoría y persona
+- 📈 **Comparativa** - Compara mes actual con el anterior
+- 🤖 **Telegram Bot** - Resumen automático el día 1 a las 7 AM (España)
+- 📊 **Gráficos** - Visualización con Chart.js en mensajes de Telegram
 
-   ```bash
-   npm install
-   ```
+## 🏗️ Tecnologías
 
-2. Start the app
+- **Frontend**: React Native + Expo
+- **Backend**: Firebase (Firestore + Auth)
+- **Automation**: GitHub Actions (cron cada hora)
+- **Notifications**: Telegram Bot API
+- **Charts**: Chart.js + chartjs-node-canvas
+- **Deploy**: Netlify (web version)
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## 🚀 Instalación Local
 
 ```bash
-npm run reset-project
+# Instalar dependencias
+npm install
+
+# Iniciar app
+npm start
+# o para web
+npm run web
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 🌐 Web Deployment
 
-## Learn more
+App web desplegada en: **gastrosmensualesgonzalez.netlify.app**
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+# Build para web
+npx expo export -p web
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+# Deploy automático en push a main (Netlify)
+```
 
-## Join the community
+## 🤖 Telegram Automation
 
-Join our community of developers creating universal apps.
+El bot envía resúmenes automáticos:
+- **Cuándo**: Día 1 de cada mes a las 7:00 AM (Europe/Madrid)
+- **Cómo**: GitHub Actions ejecuta script cada hora
+- **Qué envía**: Gráfico PNG con desglose de gastos
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Configuración (GitHub Secrets)
+
+```
+TELEGRAM_BOT_TOKEN=8760402458:AAGZV_jTk7_MjZT2W8Fb5_UYgo9ndkHZDpU
+TELEGRAM_CHAT_ID=7449761239
+FIREBASE_SERVICE_ACCOUNT=<JSON completo>
+FIREBASE_PROJECT_ID=gastos-app-3dfec
+TIMEZONE=Europe/Madrid
+FORCE_SEND=false
+```
+
+## 📂 Estructura
+
+```
+GastosApp/
+├── App.js                          # Entry point (React Navigation)
+├── src/
+│   ├── screens/
+│   │   ├── LoginScreen.js         # Auth con auto-login
+│   │   ├── AddExpenseScreen.js    # Formulario de gastos
+│   │   ├── SummaryScreen.js       # Resumen con filtros
+│   │   └── SettingsScreen.js      # Config y logout
+│   └── config/
+│       └── firebase.js            # Configuración Firebase
+├── automation/
+│   ├── send-summary.js            # Script de Telegram
+│   └── package.json               # Deps: firebase-admin, chart.js
+├── .github/workflows/
+│   └── monthly-summary.yml        # GitHub Actions cron
+└── netlify.toml                   # Config deploy web
+```
+
+## 🎨 Categorías
+
+1. 🍽️ Comida
+2. 🍬 Chucherías  
+3. 🏠 Casa
+4. 🚗 Transporte
+5. 👶 Bebé
+6. 👩 Julinda
+7. 👨 Vladimir
+
+## 👥 Usuarios
+
+- **Vladimir** (vladimiragb01@gmail.com)
+- **Julinda** (hadysanche@gmail.com)
+
+## 🔐 Firebase
+
+- **Project ID**: gastos-app-3dfec
+- **Firestore Collection**: `expenses`
+- **Auth**: Email/Password
+
+## 📅 Automation Logic
+
+```javascript
+// Se ejecuta cada hora
+// Revisa si es día 1 a las 7 AM (Europe/Madrid)
+if (now.day === 1 && now.hour === 7) {
+  // Obtiene gastos del mes anterior
+  // Genera gráfico con Chart.js
+  // Envía por Telegram
+}
+```
+
+## 🛠️ Comandos Útiles
+
+```bash
+# Desarrollo
+npm start              # Iniciar Expo
+npm run web            # Solo web
+npm run android        # Android emulator
+npm run ios            # iOS simulator
+
+# Automation (local test)
+cd automation
+npm install
+FORCE_SEND=true node send-summary.js
+
+# Lint
+npm run lint
+```
+
+## 📝 License
+
+Private - Uso familiar
+
+---
+
+**Última actualización**: Febrero 2026

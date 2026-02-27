@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   TextInput,
@@ -22,28 +22,25 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("");
 
-  // Auto-login al cargar
-  useEffect(() => {
-    checkAutoLogin();
-  }, []);
-
-  const checkAutoLogin = async () => {
+  const checkAutoLogin = useCallback(async () => {
     try {
       const savedEmail = await AsyncStorage.getItem("userEmail");
       const savedPassword = await AsyncStorage.getItem("userPassword");
 
       if (savedEmail && savedPassword) {
-        // Intentar login automático
         await signInWithEmailAndPassword(auth, savedEmail, savedPassword);
         onLoginSuccess();
       } else {
         setLoading(false);
       }
-    } catch (error) {
-      // Si falla, mostrar pantalla de login
+    } catch (_error) {
       setLoading(false);
     }
-  };
+  }, [onLoginSuccess]);
+
+  useEffect(() => {
+    checkAutoLogin();
+  }, [checkAutoLogin]);
 
   const handleAuth = async () => {
     if (!email || !password) {

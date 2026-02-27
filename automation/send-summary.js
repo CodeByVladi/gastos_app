@@ -9,7 +9,7 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const FIREBASE_SERVICE_ACCOUNT = process.env.FIREBASE_SERVICE_ACCOUNT;
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
-const TIMEZONE = process.env.TIMEZONE || "America/Los_Angeles";
+const TIMEZONE = process.env.TIMEZONE || "Europe/Madrid";
 const FORCE_SEND = process.env.FORCE_SEND === "true";
 
 if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
@@ -52,7 +52,6 @@ const categoryColors = {
 };
 
 function shouldSendNow() {
-  // MODO TEST: Siempre envía para probar
   if (FORCE_SEND) return true;
   
   const now = DateTime.now().setZone(TIMEZONE);
@@ -233,22 +232,19 @@ async function sendTelegramTextMessage(text) {
   
   const monthLabel = formatMonthName(previous);
   
-  // Si no hay gastos, enviar mensaje de prueba
   if (expenses.length === 0) {
-    const testMessage = `🤖 Prueba de Bot - ${monthLabel}\n\n✅ El bot está funcionando correctamente.\n\n📝 No hay gastos registrados para este mes.\n\n💡 Agrega gastos en la app para ver el resumen.`;
+    const testMessage = `📊 Resumen de ${monthLabel}\n\n📝 No hay gastos registrados para este mes.`;
     await sendTelegramTextMessage(testMessage);
-    console.log("Mensaje de prueba enviado (sin gastos)");
+    console.log("Mensaje enviado (sin gastos)");
     return;
   }
   
-  // Generar gráfico y enviar
   try {
     const { imagePath, grandTotal, totals } = await generateChart(expenses, monthLabel);
     await sendTelegramChart(imagePath, monthLabel, grandTotal, totals);
     console.log("Gráfico enviado exitosamente");
   } catch (error) {
     console.error("Error generando gráfico:", error.message);
-    // Si falla la imagen, enviar mensaje de texto
     const { totals, grandTotal } = buildSummary(expenses, monthLabel);
     const sortedCategories = Object.entries(totals)
       .sort((a, b) => b[1] - a[1])
