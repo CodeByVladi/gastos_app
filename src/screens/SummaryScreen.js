@@ -42,6 +42,31 @@ export default function SummaryScreen() {
   const [showComparison, setShowComparison] = useState(false);
   const [previousMonthTotal, setPreviousMonthTotal] = useState(0);
 
+  const loadComparisonData = useCallback(async () => {
+    try {
+      const previousMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1);
+      const firstDay = new Date(previousMonth.getFullYear(), previousMonth.getMonth(), 1);
+      const lastDay = new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0);
+
+      const q = query(
+        collection(db, "expenses"),
+        where("createdAt", ">=", firstDay.toISOString()),
+        where("createdAt", "<=", lastDay.toISOString()),
+      );
+
+      const querySnapshot = await getDocs(q);
+      let total = 0;
+
+      querySnapshot.forEach((doc) => {
+        total += Number(doc.data().amount || 0);
+      });
+
+      setPreviousMonthTotal(total);
+    } catch (_error) {
+      console.error("Error loading comparison:", _error);
+    }
+  }, [selectedMonth]);
+
   const loadExpenses = useCallback(async () => {
     try {
       setLoading(true);
@@ -104,31 +129,6 @@ export default function SummaryScreen() {
   useEffect(() => {
     loadExpenses();
   }, [loadExpenses]);
-
-  const loadComparisonData = useCallback(async () => {
-    try {
-      const previousMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1);
-      const firstDay = new Date(previousMonth.getFullYear(), previousMonth.getMonth(), 1);
-      const lastDay = new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0);
-
-      const q = query(
-        collection(db, "expenses"),
-        where("createdAt", ">=", firstDay.toISOString()),
-        where("createdAt", "<=", lastDay.toISOString()),
-      );
-
-      const querySnapshot = await getDocs(q);
-      let total = 0;
-
-      querySnapshot.forEach((doc) => {
-        total += Number(doc.data().amount || 0);
-      });
-
-      setPreviousMonthTotal(total);
-    } catch (_error) {
-      console.error("Error loading comparison:", _error);
-    }
-  }, [selectedMonth]);
 
   const handleDeleteExpense = (expenseId) => {
     Alert.alert(
