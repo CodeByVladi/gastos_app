@@ -258,7 +258,7 @@ export default function SummaryScreen() {
         </View>
 
         <View style={styles.filterGroup}>
-          <Text style={styles.filterLabel}>Persona</Text>
+          <Text style={styles.filterLabel}>Registrado por</Text>
           <View style={styles.filterButtonsRow}>
             <TouchableOpacity
               style={[styles.filterButton, selectedPerson === "Todos" && styles.filterButtonActive]}
@@ -273,7 +273,7 @@ export default function SummaryScreen() {
               onPress={() => setSelectedPerson("Julinda")}
             >
               <Text style={[styles.filterButtonText, selectedPerson === "Julinda" && styles.filterButtonTextActive]}>
-                👩 Julinda
+                Julinda
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -281,7 +281,7 @@ export default function SummaryScreen() {
               onPress={() => setSelectedPerson("Vladimir")}
             >
               <Text style={[styles.filterButtonText, selectedPerson === "Vladimir" && styles.filterButtonTextActive]}>
-                👨 Vladimir
+                Vladimir
               </Text>
             </TouchableOpacity>
           </View>
