@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Alert,
+  Platform,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import {
@@ -147,26 +148,39 @@ export default function SummaryScreen() {
     }, [loadExpenses])
   );
 
-  const handleDeleteExpense = (expenseId) => {
-    Alert.alert(
-      "Eliminar gasto",
-      "¿Estás seguro de que deseas eliminar este gasto?",
-      [
-        { text: "Cancelar", onPress: () => {} },
-        {
-          text: "Eliminar",
-          onPress: async () => {
-            try {
-              await deleteDoc(doc(db, "expenses", expenseId));
-              loadExpenses();
-              Alert.alert("Éxito", "Gasto eliminado correctamente");
-            } catch (_error) {
-              Alert.alert("Error", "No se pudo eliminar el gasto");
-            }
-          },
-        },
-      ]
-    );
+  const handleDeleteExpense = async (expenseId) => {
+    const confirmDelete = Platform.OS === 'web' 
+      ? window.confirm("¿Estás seguro de que deseas eliminar este gasto?")
+      : await new Promise((resolve) => {
+          Alert.alert(
+            "Eliminar gasto",
+            "¿Estás seguro de que deseas eliminar este gasto?",
+            [
+              { text: "Cancelar", onPress: () => resolve(false) },
+              { text: "Eliminar", onPress: () => resolve(true) },
+            ]
+          );
+        });
+
+    if (confirmDelete) {
+      try {
+        await deleteDoc(doc(db, "expenses", expenseId));
+        loadExpenses();
+        
+        if (Platform.OS === 'web') {
+          alert("✅ Gasto eliminado correctamente");
+        } else {
+          Alert.alert("Éxito", "Gasto eliminado correctamente");
+        }
+      } catch (error) {
+        console.error("Error eliminando gasto:", error);
+        if (Platform.OS === 'web') {
+          alert("❌ Error: No se pudo eliminar el gasto");
+        } else {
+          Alert.alert("Error", "No se pudo eliminar el gasto");
+        }
+      }
+    }
   };
 
   const changeMonth = (offset) => {
