@@ -45,9 +45,12 @@ export default function SummaryScreen() {
 
   const loadComparisonData = useCallback(async () => {
     try {
-      const previousMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1);
+      const previousMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1, 1);
       const firstDay = new Date(previousMonth.getFullYear(), previousMonth.getMonth(), 1);
+      firstDay.setHours(0, 0, 0, 0);
+      
       const lastDay = new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0);
+      lastDay.setHours(23, 59, 59, 999);
 
       const q = query(
         collection(db, "expenses"),
@@ -74,7 +77,12 @@ export default function SummaryScreen() {
 
       // Obtener rango del mes seleccionado
       const firstDay = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
+      firstDay.setHours(0, 0, 0, 0);
+      
       const lastDay = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
+      lastDay.setHours(23, 59, 59, 999);
+
+      console.log("Buscando gastos entre:", firstDay.toISOString(), "y", lastDay.toISOString());
 
       const q = query(
         collection(db, "expenses"),
@@ -83,6 +91,8 @@ export default function SummaryScreen() {
       );
 
       const querySnapshot = await getDocs(q);
+      console.log("Gastos encontrados:", querySnapshot.size);
+      
       const loadedExpenses = [];
       const totals = {};
 
@@ -94,6 +104,7 @@ export default function SummaryScreen() {
 
       querySnapshot.forEach((doc) => {
         const expense = { id: doc.id, ...doc.data() };
+        console.log("Gasto:", expense);
         loadedExpenses.push(expense);
 
         if (totals.hasOwnProperty(expense.category)) {
