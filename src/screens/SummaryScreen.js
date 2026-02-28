@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   collection,
   query,
@@ -126,9 +127,14 @@ export default function SummaryScreen() {
     }
   }, [selectedMonth, selectedCategory, selectedPerson, showComparison, loadComparisonData]);
 
-  useEffect(() => {
-    loadExpenses();
-  }, [loadExpenses]);
+  useFocusEffect(
+    useCallback(() => {
+      // Resetear filtros al entrar a la pantalla
+      setSelectedCategory("Todos");
+      setSelectedPerson("Todos");
+      loadExpenses();
+    }, [loadExpenses])
+  );
 
   const handleDeleteExpense = (expenseId) => {
     Alert.alert(
@@ -218,17 +224,33 @@ export default function SummaryScreen() {
       )}
 
       {/* Botones de control */}
-      <TouchableOpacity 
-        style={styles.comparisonButton}
-        onPress={() => {
-          setShowComparison(!showComparison);
-          if (!showComparison) loadComparisonData();
-        }}
-      >
-        <Text style={styles.comparisonButtonText}>
-          {showComparison ? "🙈 Ocultar Comparativa" : "📈 Ver Comparativa"}
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.controlButtonsRow}>
+        <TouchableOpacity 
+          style={[styles.comparisonButton, {flex: 1, marginRight: 8}]}
+          onPress={() => {
+            setShowComparison(!showComparison);
+            if (!showComparison) loadComparisonData();
+          }}
+        >
+          <Text style={styles.comparisonButtonText}>
+            {showComparison ? "🙈 Ocultar" : "📈 Comparar"}
+          </Text>
+        </TouchableOpacity>
+
+        {(selectedCategory !== "Todos" || selectedPerson !== "Todos") && (
+          <TouchableOpacity 
+            style={[styles.comparisonButton, {flex: 1, backgroundColor: "#FF6B6B"}]}
+            onPress={() => {
+              setSelectedCategory("Todos");
+              setSelectedPerson("Todos");
+            }}
+          >
+            <Text style={styles.comparisonButtonText}>
+              🔄 Limpiar Filtros
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Filtros */}
       <View style={styles.filtersContainer}>
@@ -448,6 +470,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "bold",
     color: "#333",
+  },
+  controlButtonsRow: {
+    flexDirection: "row",
+    marginBottom: 16,
   },
   comparisonButton: {
     backgroundColor: "#2196F3",

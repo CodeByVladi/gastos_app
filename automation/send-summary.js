@@ -12,22 +12,7 @@ const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
 const TIMEZONE = process.env.TIMEZONE || "Europe/Madrid";
 const FORCE_SEND = process.env.FORCE_SEND === "true";
 
-if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-  throw new Error("Faltan variables TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID");
-}
-
-if (!FIREBASE_SERVICE_ACCOUNT) {
-  throw new Error("Falta FIREBASE_SERVICE_ACCOUNT (JSON del service account)");
-}
-
-const serviceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT);
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  projectId: FIREBASE_PROJECT_ID || serviceAccount.project_id,
-});
-
-const db = admin.firestore();
+let db = null;
 
 const CATEGORIES = ["Comida", "Chucherías", "Casa", "Transporte", "Bebé", "Julinda", "Vladimir"];
 
@@ -56,6 +41,37 @@ function shouldSendNow() {
   
   const now = DateTime.now().setZone(TIMEZONE);
   return now.day === 1 && now.hour === 7;
+}
+
+function getRuntimeConfig() {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.log("Faltan TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID. Se omite ejecución.");
+    return null;
+  }
+
+  if (!FIREBASE_SERVICE_ACCOUNT) {
+    console.log("Falta FIREBASE_SERVICE_ACCOUNT. Se omite ejecución.");
+    return null;
+  }
+
+  try {
+    const serviceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT);
+    return { serviceAccount };
+  } catch (_error) {
+    console.log("FIREBASE_SERVICE_ACCOUNT no es JSON válido. Se omite ejecución.");
+    return null;
+  }
+}
+
+function ensureFirebaseInitialized(serviceAccount) {
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      projectId: FIREBASE_PROJECT_ID || serviceAccount.project_id,
+    });
+  }
+
+  db = admin.firestore();
 }
 
 function getPreviousMonthRange() {
@@ -218,10 +234,17 @@ async function sendTelegramTextMessage(text) {
 }
 
 (async () => {
-  if (!FORCE_SEND && !shouldSendNow()) {
+  if (!shouldSendNow()) {
     console.log("No es día 1 a las 7 AM. No se envía mensaje.");
     return;
   }
+
+  const runtimeConfig = getRuntimeConfig();
+  if (!runtimeConfig) {
+    return;
+  }
+
+  ensureFirebaseInitialized(runtimeConfig.serviceAccount);
 
   console.log("Enviando resumen mensual...");
 
