@@ -37,10 +37,17 @@ const categoryColors = {
 };
 
 function shouldSendNow() {
-  if (FORCE_SEND) return true;
+  if (FORCE_SEND) {
+    console.log("FORCE_SEND activado - enviando mensaje");
+    return true;
+  }
   
   const now = DateTime.now().setZone(TIMEZONE);
-  return now.day === 1 && now.hour === 7;
+  const shouldSend = now.day === 1 && now.hour === 7;
+  
+  console.log(`Verificando si debe enviar: día=${now.day}, hora=${now.hour}, shouldSend=${shouldSend}`);
+  
+  return shouldSend;
 }
 
 function getRuntimeConfig() {
@@ -234,13 +241,20 @@ async function sendTelegramTextMessage(text) {
 }
 
 (async () => {
+  console.log("=== Iniciando script de resumen mensual ===");
+  console.log(`Timezone: ${TIMEZONE}`);
+  console.log(`FORCE_SEND: ${FORCE_SEND}`);
+  console.log(`TELEGRAM_BOT_TOKEN configurado: ${!!TELEGRAM_BOT_TOKEN}`);
+  console.log(`TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}`);
+  
   if (!shouldSendNow()) {
-    console.log("No es día 1 a las 7 AM. No se envía mensaje.");
+    console.log("❌ No es momento de enviar. Script finalizado.");
     return;
   }
 
   const runtimeConfig = getRuntimeConfig();
   if (!runtimeConfig) {
+    console.log("❌ Configuración inválida. Script finalizado.");
     return;
   }
 
