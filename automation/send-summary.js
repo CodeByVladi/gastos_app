@@ -134,18 +134,11 @@ async function generateChart(expenses, monthLabel) {
 
   const width = 800;
   const height = 600;
-  const chartCallback = (ChartJS) => {
-    ChartJS.defaults.responsive = false;
-    ChartJS.defaults.maintainAspectRatio = false;
-    ChartJS.defaults.plugins.legend.position = "bottom";
-    ChartJS.defaults.plugins.legend.labels.font.size = 14;
-    ChartJS.defaults.plugins.legend.labels.padding = 20;
-  };
 
   const canvasRenderService = new ChartJSNodeCanvas({
     width,
     height,
-    chartCallback
+    backgroundColour: 'white'
   });
 
   const chartConfig = {
@@ -165,24 +158,34 @@ async function generateChart(expenses, monthLabel) {
     options: {
       responsive: false,
       maintainAspectRatio: false,
+      layout: {
+        padding: 20
+      },
       plugins: {
         title: {
           display: true,
           text: `Resumen de ${monthLabel}`,
           font: {
-            size: 20,
-            weight: "bold"
+            size: 24,
+            weight: 'bold'
           },
           padding: {
-            bottom: 30
-          }
+            top: 10,
+            bottom: 20
+          },
+          color: '#333'
         },
         legend: {
           display: true,
+          position: 'bottom',
           labels: {
             usePointStyle: true,
-            pointStyle: "circle",
-            padding: 20
+            pointStyle: 'circle',
+            padding: 15,
+            font: {
+              size: 14
+            },
+            color: '#333'
           }
         }
       }
