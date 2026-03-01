@@ -189,16 +189,12 @@ async function generateChart(expenses, monthLabel) {
     }
   };
 
-  const image = await canvasRenderService.renderToBuffer(chartConfig);
+  const imageBuffer = await canvasRenderService.renderToBuffer(chartConfig);
   
-  // Guardar imagen temporalmente
-  const imagePath = path.join("/tmp", "gastos-chart.png");
-  fs.writeFileSync(imagePath, image);
-  
-  return { imagePath, grandTotal, totals };
+  return { imageBuffer, grandTotal, totals };
 }
 
-async function sendTelegramChart(imagePath, monthLabel, grandTotal, totals) {
+async function sendTelegramChart(imageBuffer, monthLabel, grandTotal, totals) {
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
   
   // Crear caption con información
@@ -219,16 +215,16 @@ async function sendTelegramChart(imagePath, monthLabel, grandTotal, totals) {
   const FormData = require('form-data');
   const form = new FormData();
   form.append("chat_id", TELEGRAM_CHAT_ID);
-  form.append("photo", fs.createReadStream(imagePath));
+  form.append("photo", imageBuffer, {
+    filename: "gastos-chart.png",
+    contentType: "image/png"
+  });
   form.append("caption", caption);
   form.append("parse_mode", "HTML");
 
   await axios.post(url, form, {
     headers: form.getHeaders()
   });
-
-  // Limpiar archivo temporal
-  fs.unlinkSync(imagePath);
 }
 
 async function sendTelegramTextMessage(text) {
@@ -277,11 +273,12 @@ async function sendTelegramTextMessage(text) {
   }
   
   try {
-    const { imagePath, grandTotal, totals } = await generateChart(expenses, monthLabel);
-    await sendTelegramChart(imagePath, monthLabel, grandTotal, totals);
-    console.log("Gráfico enviado exitosamente");
+    const { imageBuffer, grandTotal, totals } = await generateChart(expenses, monthLabel);
+    await sendTelegramChart(imageBuffer, monthLabel, grandTotal, totals);
+    console.log("✅ Gráfico enviado exitosamente");
   } catch (error) {
-    console.error("Error generando gráfico:", error.message);
+    console.error("❌ Error generando gráfico:", error.message);
+    console.error("Stack trace:", error.stack);
     const { totals, grandTotal } = buildSummary(expenses, monthLabel);
     const sortedCategories = Object.entries(totals)
       .sort((a, b) => b[1] - a[1])
@@ -296,7 +293,7 @@ async function sendTelegramTextMessage(text) {
     
     textMessage += `\n💰 <b>TOTAL: $${grandTotal.toFixed(2)}</b>`;
     await sendTelegramTextMessage(textMessage);
-    console.log("Mensaje de texto enviado (fallo en gráfico)");
+    console.log("📝 Mensaje de texto enviado (fallo en gráfico)");
   }
 })();
 
